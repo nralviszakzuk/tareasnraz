@@ -71,6 +71,13 @@
   .org-btn[data-org="alzak-foundation"].active { background: #1B7A3D; }
   .org-btn[data-org="alzak-group"].active { background: #1a1a18; }
   .org-btn[data-org="sistemas-globales"].active { background: #C62828; }
+  .filter-divider { width: 1px; height: 20px; background: var(--border-strong); margin: 0 4px; }
+  .resp-btn { font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+  .resp-btn:hover { border-color: var(--border-strong); color: var(--text-primary); }
+  .resp-btn.active { color: white; border-color: transparent; }
+  .resp-btn[data-resp="all"].active { background: #5f5e5a; }
+  .resp-btn[data-resp="nelson"].active { background: #1a1a18; }
+  .resp-btn[data-resp="paula"].active { background: #7B1FA2; }
   .new-task-btn { margin-left: auto; font-size: 13px; font-weight: 500; padding: 6px 16px; border-radius: var(--radius); background: #2c2c2a; color: white; border: none; cursor: pointer; }
   .new-task-btn:hover { opacity: 0.85; }
 
@@ -177,6 +184,10 @@
     <button class="org-btn" data-org="alzak-foundation">ALZAK Foundation</button>
     <button class="org-btn" data-org="alzak-group">ALZAK Group SAS</button>
     <button class="org-btn" data-org="sistemas-globales">Sistemas Globales</button>
+    <span class="filter-divider"></span>
+    <button class="resp-btn active" data-resp="all">Ambos</button>
+    <button class="resp-btn" data-resp="nelson">Nelson R. Alvis</button>
+    <button class="resp-btn" data-resp="paula">Paula Pinzón</button>
     <button class="new-task-btn" onclick="openModal(null,'pendiente')">+ Nueva tarea</button>
   </div>
 
@@ -277,6 +288,7 @@ const CACHE_KEY   = 'alzak-tasks-cache';
 let tasks        = [];
 let editingId    = null;
 let activeFilter = 'all';
+let respFilter   = 'all';
 const SCRIPT_URL_DEFAULT = 'https://script.google.com/a/macros/alzakfoundation.org/s/AKfycbxDUNGEjBC6JvkIGKAe5s2JQF18ydWKzyzJGUnYE6TPgSdJtCOndl1JKKXIQkDkplLkkA/exec';
 let scriptUrl    = localStorage.getItem(URL_KEY) || SCRIPT_URL_DEFAULT;
 
@@ -428,7 +440,9 @@ function donutSVG(pct, color, size) {
 }
 
 function renderStats() {
-  const visible = activeFilter === 'all' ? tasks : tasks.filter(t => t.org === activeFilter);
+  const visible = tasks.filter(t =>
+    (activeFilter === 'all' || t.org === activeFilter) &&
+    (respFilter === 'all' || t.resp === respFilter));
   const total   = visible.length;
   const done    = visible.filter(t => t.status === 'completado').length;
   const prog    = visible.filter(t => t.status === 'en-progreso').length;
@@ -515,7 +529,9 @@ function renderAll() {
     col.innerHTML = '';
     col.appendChild(header);
 
-    const filtered = tasks.filter(t => t.status === status && (activeFilter === 'all' || t.org === activeFilter));
+    const filtered = tasks.filter(t => t.status === status
+      && (activeFilter === 'all' || t.org === activeFilter)
+      && (respFilter === 'all' || t.resp === respFilter));
     document.getElementById('cnt-' + status).textContent = filtered.length;
 
     // Orden cronológico: fecha más próxima primero; sin fecha al final
@@ -648,6 +664,15 @@ document.querySelectorAll('.org-btn').forEach(btn => {
     document.querySelectorAll('.org-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     activeFilter = btn.dataset.org;
+    renderAll();
+  });
+});
+
+document.querySelectorAll('.resp-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.resp-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    respFilter = btn.dataset.resp;
     renderAll();
   });
 });
