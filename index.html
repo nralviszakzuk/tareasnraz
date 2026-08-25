@@ -383,11 +383,27 @@ async function pushDelete(id) {
 // ── RENDER ─────────────────────────────────────────────────
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
+function normDate(d) {
+  // Normaliza cualquier formato de fecha a "YYYY-MM-DD"
+  if (!d) return '';
+  d = String(d).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  const parsed = new Date(d);
+  if (isNaN(parsed)) return '';
+  const y = parsed.getFullYear();
+  const m = String(parsed.getMonth()+1).padStart(2,'0');
+  const day = String(parsed.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
 function daysUntil(d) {
+  d = normDate(d);
   if (!d) return null;
-  return Math.ceil((new Date(d+'T00:00:00') - new Date()) / 86400000);
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  return Math.round((new Date(d+'T00:00:00') - today) / 86400000);
 }
 function fmtDate(d) {
+  d = normDate(d);
   if (!d) return '';
   const [y,m,day] = d.split('-');
   return `${day}/${m}/${y}`;
@@ -489,7 +505,7 @@ function renderAll() {
         const days = daysUntil(t.date);
         const urgent = days !== null && days <= 7;
         let dateLine = '';
-        if (t.date) {
+        if (normDate(t.date)) {
           const ds = days === 0 ? 'hoy' : days < 0 ? `vencida hace ${Math.abs(days)}d` : `en ${days}d`;
           dateLine = `<div class="task-date ${urgent?'urgent':''}">📅 ${fmtDate(t.date)} · ${ds}</div>`;
         }
@@ -528,7 +544,7 @@ function openModal(taskId, defaultStatus) {
   document.getElementById('f-org').value    = t?.org    ?? 'alzak-group';
   document.getElementById('f-prio').value   = t?.prio   ?? 'med';
   document.getElementById('f-status').value = t?.status ?? (defaultStatus || 'pendiente');
-  document.getElementById('f-date').value   = t?.date   ?? '';
+  document.getElementById('f-date').value   = normDate(t?.date) || '';
   document.getElementById('f-notes').value  = t?.notes  ?? '';
   document.getElementById('f-resp').value   = t?.resp   ?? 'nelson';
   document.getElementById('btn-delete').style.display = t ? 'block' : 'none';
