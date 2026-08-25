@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Tareas Nelson Rafael Alvis Zakzuk</title>
+<title>Tablero de seguimiento de actividades y tareas</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -45,6 +45,19 @@
   .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; }
   .stat-num { font-size: 22px; font-weight: 600; }
   .stat-lbl { font-size: 11px; color: var(--text-muted); }
+  .donut-card { display: flex; align-items: center; gap: 10px; }
+  .donut-label { font-size: 11px; color: var(--text-secondary); font-weight: 600; line-height: 1.4; }
+  .mini-breakdown { display: flex; gap: 8px; margin-top: 6px; font-size: 10px; flex-wrap: wrap; }
+  .progress-track { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; width: 100%; min-width: 120px; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+  .mini-pct { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+  .resp-card { min-width: 220px; }
+  .resp-progress { margin-bottom: 10px; }
+  .resp-progress:last-child { margin-bottom: 0; }
+  .resp-progress-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+  .resp-progress-name { font-size: 11px; font-weight: 600; color: var(--text-secondary); flex: 1; }
+  .resp-progress-pct { font-size: 12px; font-weight: 700; }
+  .resp-progress-detail { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
 
   /* FILTERS */
   .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
@@ -129,8 +142,7 @@
 <!-- HEADER -->
 <header>
   <div class="header-left">
-    <div class="logo-mark">AZ</div>
-    <span class="app-title">Tareas Nelson Rafael Alvis Zakzuk</span>
+    <span class="app-title">Tablero de seguimiento de actividades y tareas</span>
   </div>
   <div class="sync-badge">
     <span class="sync-dot" id="sync-dot"></span>
@@ -381,19 +393,78 @@ function fmtDate(d) {
   return `${day}/${m}/${y}`;
 }
 
+function donutSVG(pct, color, size) {
+  const r = (size/2) - 6;
+  const circ = 2 * Math.PI * r;
+  const filled = circ * (pct/100);
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#e2e2df" stroke-width="9"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="9"
+      stroke-dasharray="${filled} ${circ}" stroke-linecap="round"
+      transform="rotate(-90 ${size/2} ${size/2})" style="transition:stroke-dasharray 0.6s ease"/>
+    <text x="50%" y="50%" text-anchor="middle" dominant-baseline="central" font-size="${size*0.22}" font-weight="700" fill="${color}">${pct}%</text>
+  </svg>`;
+}
+
 function renderStats() {
   const visible = activeFilter === 'all' ? tasks : tasks.filter(t => t.org === activeFilter);
   const total   = visible.length;
   const done    = visible.filter(t => t.status === 'completado').length;
+  const prog    = visible.filter(t => t.status === 'en-progreso').length;
+  const pend    = visible.filter(t => t.status === 'pendiente').length;
+  const pct     = total > 0 ? Math.round(done/total*100) : 0;
+
+  // Cumplimiento por responsable
+  let respHtml = '';
+  [['nelson','#1a1a18'],['paula','#7B1FA2']].forEach(([resp,color]) => {
+    const rTasks = visible.filter(t => t.resp === resp);
+    if (rTasks.length === 0) return;
+    const rDone = rTasks.filter(t => t.status === 'completado').length;
+    const rPct  = Math.round(rDone/rTasks.length*100);
+    respHtml += `
+      <div class="resp-progress">
+        <div class="resp-progress-header">
+          <span class="resp-avatar" style="background:${color}">${RESP_LABELS[resp].charAt(0)}</span>
+          <span class="resp-progress-name">${RESP_LABELS[resp]}</span>
+          <span class="resp-progress-pct" style="color:${color}">${rPct}%</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:${rPct}%; background:${color}"></div></div>
+        <div class="resp-progress-detail">${rDone} de ${rTasks.length} completadas</div>
+      </div>`;
+  });
+
   let html = `
-    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-lbl">Total tareas</div></div>
-    <div class="stat-card" style="border-left:3px solid #3B6D11"><div class="stat-num" style="color:#3B6D11">${done}</div><div class="stat-lbl">Completadas</div></div>`;
+    <div class="stat-card donut-card">
+      ${donutSVG(pct, pct >= 70 ? '#1B7A3D' : pct >= 40 ? '#BA7517' : '#C62828', 90)}
+      <div class="donut-label">Cumplimiento<br>general</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">${total}</div><div class="stat-lbl">Total tareas</div>
+      <div class="mini-breakdown">
+        <span style="color:#BA7517">● ${pend} pend.</span>
+        <span style="color:#185FA5">● ${prog} en prog.</span>
+        <span style="color:#3B6D11">● ${done} compl.</span>
+      </div>
+    </div>`;
+
   if (activeFilter === 'all') {
     [['alzak-foundation','#1B7A3D'],['alzak-group','#1a1a18'],['sistemas-globales','#C62828']].forEach(([org,color]) => {
-      const n = tasks.filter(t => t.org === org).length;
-      html += `<div class="stat-card" style="border-left:3px solid ${color}"><div class="stat-num" style="color:${color}">${n}</div><div class="stat-lbl">${ORG_LABELS[org]}</div></div>`;
+      const oTasks = tasks.filter(t => t.org === org);
+      const oDone  = oTasks.filter(t => t.status === 'completado').length;
+      const oPct   = oTasks.length > 0 ? Math.round(oDone/oTasks.length*100) : 0;
+      html += `<div class="stat-card" style="border-left:3px solid ${color}">
+        <div class="stat-num" style="color:${color}">${oTasks.length}</div>
+        <div class="stat-lbl">${ORG_LABELS[org]}</div>
+        <div class="progress-track" style="margin-top:6px"><div class="progress-fill" style="width:${oPct}%; background:${color}"></div></div>
+        <div class="mini-pct">${oPct}% completado</div>
+      </div>`;
     });
   }
+
+  if (respHtml) {
+    html += `<div class="stat-card resp-card"><div class="stat-lbl" style="margin-bottom:8px">Cumplimiento por responsable</div>${respHtml}</div>`;
+  }
+
   document.getElementById('stats-bar').innerHTML = html;
 }
 
