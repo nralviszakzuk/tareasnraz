@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tablero de Tareas — ALZAK</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f5f5f3; --surface: #ffffff; --surface-2: #f9f9f8;
+    --border: #e2e2df; --border-strong: #c8c8c4;
+    --text-primary: #1a1a18; --text-secondary: #5f5e5a; --text-muted: #9a9994;
+    --radius: 8px; --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text-primary); min-height: 100vh; }
+
+  /* HEADER */
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 50; }
+  .logo-mark { width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg,#0F6E56,#185FA5); display: flex; align-items: center; justify-content: center; color: white; font-size: 13px; font-weight: 700; }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .app-title { font-size: 15px; font-weight: 600; }
+  .sync-badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid var(--border); color: var(--text-muted); display: flex; align-items: center; gap: 5px; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #639922; transition: background 0.3s; }
+  .sync-dot.syncing { background: #BA7517; }
+  .sync-dot.error { background: #993C1D; }
+
+  /* SETUP BANNER */
+  .setup-banner { background: #FFF8E7; border: 1px solid #F5D589; border-radius: var(--radius); padding: 14px 18px; margin: 1.5rem 2rem 0; display: flex; align-items: flex-start; gap: 12px; }
+  .setup-banner.hidden { display: none; }
+  .setup-banner-icon { font-size: 20px; flex-shrink: 0; }
+  .setup-banner h4 { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .setup-banner p { font-size: 12px; color: var(--text-secondary); margin-bottom: 10px; line-height: 1.5; }
+  .setup-input-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .setup-input { font-size: 12px; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius); width: 420px; max-width: 100%; font-family: monospace; }
+  .setup-input:focus { outline: none; border-color: #185FA5; }
+  .btn-setup-save { font-size: 12px; padding: 6px 14px; background: #185FA5; color: white; border: none; border-radius: var(--radius); cursor: pointer; white-space: nowrap; }
+  .btn-setup-save:hover { opacity: 0.85; }
+
+  /* MAIN */
+  main { padding: 1.5rem 2rem; max-width: 1200px; margin: 0 auto; }
+  @media(max-width:768px){ main{padding:1rem;} header{padding:0 1rem;} .board{grid-template-columns:1fr!important;} .setup-banner{margin:1rem 1rem 0;} }
+
+  /* STATS */
+  .stats-bar { display: flex; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; }
+  .stat-num { font-size: 22px; font-weight: 600; }
+  .stat-lbl { font-size: 11px; color: var(--text-muted); }
+
+  /* FILTERS */
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
+  .filters-label { font-size: 12px; color: var(--text-muted); margin-right: 4px; }
+  .org-btn { font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text-secondary); cursor: pointer; transition: all 0.15s; }
+  .org-btn:hover { border-color: var(--border-strong); color: var(--text-primary); }
+  .org-btn.active { color: white; border-color: transparent; }
+  .org-btn[data-org="all"].active { background: #2c2c2a; }
+  .org-btn[data-org="alzak-foundation"].active { background: #185FA5; }
+  .org-btn[data-org="alzak-group"].active { background: #0F6E56; }
+  .org-btn[data-org="sistemas-globales"].active { background: #993C1D; }
+  .new-task-btn { margin-left: auto; font-size: 13px; font-weight: 500; padding: 6px 16px; border-radius: var(--radius); background: #2c2c2a; color: white; border: none; cursor: pointer; }
+  .new-task-btn:hover { opacity: 0.85; }
+
+  /* BOARD */
+  .board { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; align-items: start; }
+  .col { background: var(--surface-2); border-radius: 12px; border: 1px solid var(--border); padding: 12px; min-height: 200px; }
+  .col-header { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.07em; padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .col-header-left { display: flex; align-items: center; gap: 6px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .col-count { font-size: 11px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1px 8px; color: var(--text-muted); font-weight: 400; }
+
+  /* CARDS */
+  .task-card { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 10px 12px; margin-bottom: 7px; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+  .task-card:hover { border-color: var(--border-strong); box-shadow: var(--shadow); }
+  .task-title { font-size: 13px; line-height: 1.45; margin-bottom: 8px; }
+  .task-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .org-pill { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted); }
+  .org-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .prio { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; margin-left: auto; }
+  .prio-high { background:#FAECE7; color:#7A2E10; }
+  .prio-med  { background:#FAEEDA; color:#6B3D08; }
+  .prio-low  { background:#EAF3DE; color:#2E5508; }
+  .task-date { font-size: 11px; color: var(--text-muted); margin-top: 5px; }
+  .task-date.urgent { color: #993C1D; font-weight: 600; }
+  .task-notes { font-size: 11px; color: var(--text-muted); margin-top: 3px; font-style: italic; }
+  .add-btn { width: 100%; margin-top: 6px; font-size: 12px; color: var(--text-muted); background: transparent; border: 1px dashed var(--border); border-radius: var(--radius); padding: 8px; cursor: pointer; text-align: left; }
+  .add-btn:hover { background: var(--surface); border-color: var(--border-strong); color: var(--text-secondary); }
+  .empty-state { text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 13px; }
+
+  /* LOADING */
+  .loading-overlay { position: fixed; inset: 0; background: rgba(245,245,243,0.8); z-index: 300; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+  .loading-overlay.hidden { display: none; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: #185FA5; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text-secondary); }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; align-items: center; justify-content: center; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: 14px; border: 1px solid var(--border); padding: 1.5rem; width: 100%; max-width: 420px; margin: 1rem; box-shadow: 0 20px 60px rgba(0,0,0,0.15); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; }
+  .modal-header h3 { font-size: 16px; font-weight: 600; }
+  .modal-close { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 22px; line-height: 1; padding: 2px 6px; border-radius: 4px; }
+  .modal-close:hover { background: var(--bg); }
+  .field-group { margin-bottom: 12px; }
+  .field-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; display: block; font-weight: 500; }
+  .field-group input, .field-group select, .field-group textarea { width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); color: var(--text-primary); outline: none; font-family: inherit; transition: border-color 0.15s; }
+  .field-group input:focus, .field-group select:focus, .field-group textarea:focus { border-color: #185FA5; }
+  .field-group textarea { resize: vertical; height: 60px; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+  .btn-delete { font-size: 12px; color: #993C1D; background: none; border: none; cursor: pointer; padding: 6px 0; }
+  .btn-delete:hover { text-decoration: underline; }
+  .modal-actions { display: flex; gap: 8px; }
+  .btn-cancel { font-size: 13px; padding: 7px 16px; border-radius: var(--radius); background: none; border: 1px solid var(--border); color: var(--text-secondary); cursor: pointer; }
+  .btn-cancel:hover { border-color: var(--border-strong); }
+  .btn-save { font-size: 13px; padding: 7px 16px; border-radius: var(--radius); background: #2c2c2a; color: white; border: none; cursor: pointer; font-weight: 500; }
+  .btn-save:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text">Cargando tareas...</div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="header-left">
+    <div class="logo-mark">AZ</div>
+    <span class="app-title">Tablero ALZAK</span>
+  </div>
+  <div class="sync-badge">
+    <span class="sync-dot" id="sync-dot"></span>
+    <span id="sync-text">Sincronizado</span>
+  </div>
+</header>
+
+<!-- SETUP BANNER -->
+<div class="setup-banner" id="setup-banner">
+  <div class="setup-banner-icon">⚙️</div>
+  <div>
+    <h4>Conecta tu Google Sheet</h4>
+    <p>Pega aquí la URL de tu Web App de Google Apps Script para sincronizar las tareas con el Sheet.</p>
+    <div class="setup-input-row">
+      <input class="setup-input" id="script-url-input" type="text" placeholder="https://script.google.com/macros/s/XXXXXX/exec" />
+      <button class="btn-setup-save" onclick="saveScriptUrl()">Guardar y conectar</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <div class="stats-bar" id="stats-bar"></div>
+
+  <div class="filters">
+    <span class="filters-label">Ver:</span>
+    <button class="org-btn active" data-org="all">Todas</button>
+    <button class="org-btn" data-org="alzak-foundation">ALZAK Foundation</button>
+    <button class="org-btn" data-org="alzak-group">ALZAK Group SAS</button>
+    <button class="org-btn" data-org="sistemas-globales">Sistemas Globales</button>
+    <button class="new-task-btn" onclick="openModal(null,'pendiente')">+ Nueva tarea</button>
+  </div>
+
+  <div class="board">
+    <div class="col" id="col-pendiente">
+      <div class="col-header">
+        <div class="col-header-left"><span class="status-dot" style="background:#BA7517"></span>Pendiente</div>
+        <span class="col-count" id="cnt-pendiente">0</span>
+      </div>
+    </div>
+    <div class="col" id="col-en-progreso">
+      <div class="col-header">
+        <div class="col-header-left"><span class="status-dot" style="background:#185FA5"></span>En progreso</div>
+        <span class="col-count" id="cnt-en-progreso">0</span>
+      </div>
+    </div>
+    <div class="col" id="col-completado">
+      <div class="col-header">
+        <div class="col-header-left"><span class="status-dot" style="background:#3B6D11"></span>Completado</div>
+        <span class="col-count" id="cnt-completado">0</span>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title">Nueva tarea</h3>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Tarea *</label>
+      <input type="text" id="f-title" placeholder="Describe la tarea..." />
+    </div>
+    <div class="field-group">
+      <label class="field-label">Organización</label>
+      <select id="f-org">
+        <option value="alzak-foundation">ALZAK Foundation</option>
+        <option value="alzak-group">ALZAK Group SAS</option>
+        <option value="sistemas-globales">Sistemas Globales Cartagena SAS</option>
+      </select>
+    </div>
+    <div class="two-col">
+      <div class="field-group">
+        <label class="field-label">Prioridad</label>
+        <select id="f-prio">
+          <option value="high">Alta</option>
+          <option value="med">Media</option>
+          <option value="low">Baja</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Estado</label>
+        <select id="f-status">
+          <option value="pendiente">Pendiente</option>
+          <option value="en-progreso">En progreso</option>
+          <option value="completado">Completado</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Fecha límite</label>
+      <input type="date" id="f-date" />
+    </div>
+    <div class="field-group">
+      <label class="field-label">Notas</label>
+      <textarea id="f-notes" placeholder="Detalles adicionales..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-delete" id="btn-delete" style="display:none" onclick="deleteTask()">🗑 Eliminar tarea</button>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+        <button class="btn-save" onclick="saveTask()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────
+const ORG_COLORS  = { 'alzak-foundation':'#185FA5','alzak-group':'#0F6E56','sistemas-globales':'#993C1D' };
+const ORG_LABELS  = { 'alzak-foundation':'ALZAK Foundation','alzak-group':'ALZAK Group SAS','sistemas-globales':'Sistemas Globales' };
+const PRIO_LABELS = { high:'Alta', med:'Media', low:'Baja' };
+const URL_KEY     = 'alzak-script-url';
+const CACHE_KEY   = 'alzak-tasks-cache';
+
+let tasks        = [];
+let editingId    = null;
+let activeFilter = 'all';
+const SCRIPT_URL_DEFAULT = 'https://script.google.com/a/macros/alzakfoundation.org/s/AKfycbxDUNGEjBC6JvkIGKAe5s2JQF18ydWKzyzJGUnYE6TPgSdJtCOndl1JKKXIQkDkplLkkA/exec';
+let scriptUrl    = localStorage.getItem(URL_KEY) || SCRIPT_URL_DEFAULT;
+
+// ── SETUP ──────────────────────────────────────────────────
+function saveScriptUrl() {
+  const val = document.getElementById('script-url-input').value.trim();
+  if (!val.startsWith('https://script.google.com')) {
+    alert('La URL no parece válida. Debe empezar con https://script.google.com');
+    return;
+  }
+  scriptUrl = val;
+  localStorage.setItem(URL_KEY, scriptUrl);
+  document.getElementById('setup-banner').classList.add('hidden');
+  loadTasks();
+}
+
+function checkSetup() {
+  document.getElementById('setup-banner').classList.add('hidden');
+}
+
+// ── SYNC STATUS ────────────────────────────────────────────
+function setSyncStatus(s) {
+  const dot = document.getElementById('sync-dot');
+  const txt = document.getElementById('sync-text');
+  dot.className = 'sync-dot' + (s === 'syncing' ? ' syncing' : s === 'error' ? ' error' : '');
+  txt.textContent = s === 'syncing' ? 'Sincronizando...' : s === 'error' ? 'Error de conexión' : 'Sincronizado';
+}
+
+// ── LOADING ────────────────────────────────────────────────
+function showLoading() { document.getElementById('loading-overlay').classList.remove('hidden'); }
+function hideLoading()  { document.getElementById('loading-overlay').classList.add('hidden'); }
+
+// ── API CALLS ──────────────────────────────────────────────
+async function apiCall(params) {
+  const url = new URL(scriptUrl);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+  const res = await fetch(url.toString());
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+async function loadTasks() {
+  if (!scriptUrl) return;
+  showLoading();
+  setSyncStatus('syncing');
+  try {
+    const data = await apiCall({ action: 'getTasks' });
+    tasks = data.tasks || [];
+    localStorage.setItem(CACHE_KEY, JSON.stringify(tasks));
+    setSyncStatus('ok');
+  } catch(e) {
+    // Fallback a caché local
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) tasks = JSON.parse(cached);
+    setSyncStatus('error');
+  }
+  hideLoading();
+  renderAll();
+}
+
+async function pushTask(taskData) {
+  setSyncStatus('syncing');
+  try {
+    await apiCall({ action: 'saveTask', ...taskData });
+    setSyncStatus('ok');
+    // Actualizar caché
+    localStorage.setItem(CACHE_KEY, JSON.stringify(tasks));
+  } catch(e) {
+    setSyncStatus('error');
+    alert('No se pudo guardar en el Sheet. La tarea se guardó localmente.');
+  }
+}
+
+async function pushDelete(id) {
+  setSyncStatus('syncing');
+  try {
+    await apiCall({ action: 'deleteTask', id });
+    setSyncStatus('ok');
+    localStorage.setItem(CACHE_KEY, JSON.stringify(tasks));
+  } catch(e) {
+    setSyncStatus('error');
+  }
+}
+
+// ── RENDER ─────────────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function daysUntil(d) {
+  if (!d) return null;
+  return Math.ceil((new Date(d+'T00:00:00') - new Date()) / 86400000);
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const [y,m,day] = d.split('-');
+  return `${day}/${m}/${y}`;
+}
+
+function renderStats() {
+  const visible = activeFilter === 'all' ? tasks : tasks.filter(t => t.org === activeFilter);
+  const total   = visible.length;
+  const done    = visible.filter(t => t.status === 'completado').length;
+  let html = `
+    <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-lbl">Total tareas</div></div>
+    <div class="stat-card" style="border-left:3px solid #3B6D11"><div class="stat-num" style="color:#3B6D11">${done}</div><div class="stat-lbl">Completadas</div></div>`;
+  if (activeFilter === 'all') {
+    [['alzak-foundation','#185FA5'],['alzak-group','#0F6E56'],['sistemas-globales','#993C1D']].forEach(([org,color]) => {
+      const n = tasks.filter(t => t.org === org).length;
+      html += `<div class="stat-card" style="border-left:3px solid ${color}"><div class="stat-num" style="color:${color}">${n}</div><div class="stat-lbl">${ORG_LABELS[org]}</div></div>`;
+    });
+  }
+  document.getElementById('stats-bar').innerHTML = html;
+}
+
+function renderAll() {
+  renderStats();
+  ['pendiente','en-progreso','completado'].forEach(status => {
+    const col    = document.getElementById('col-' + status);
+    const header = col.querySelector('.col-header');
+    col.innerHTML = '';
+    col.appendChild(header);
+
+    const filtered = tasks.filter(t => t.status === status && (activeFilter === 'all' || t.org === activeFilter));
+    document.getElementById('cnt-' + status).textContent = filtered.length;
+
+    if (filtered.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.textContent = 'Sin tareas';
+      col.appendChild(empty);
+    } else {
+      filtered.forEach(t => {
+        const days = daysUntil(t.date);
+        const urgent = days !== null && days <= 7;
+        let dateLine = '';
+        if (t.date) {
+          const ds = days === 0 ? 'hoy' : days < 0 ? `vencida hace ${Math.abs(days)}d` : `en ${days}d`;
+          dateLine = `<div class="task-date ${urgent?'urgent':''}">📅 ${fmtDate(t.date)} · ${ds}</div>`;
+        }
+        const notesLine = t.notes ? `<div class="task-notes">💬 ${t.notes}</div>` : '';
+        const card = document.createElement('div');
+        card.className = 'task-card';
+        card.innerHTML = `
+          <div class="task-title">${t.title}</div>
+          <div class="task-meta">
+            <div class="org-pill">
+              <span class="org-dot" style="background:${ORG_COLORS[t.org]}"></span>
+              <span>${ORG_LABELS[t.org]}</span>
+            </div>
+            <span class="prio prio-${t.prio}">${PRIO_LABELS[t.prio]}</span>
+          </div>${dateLine}${notesLine}`;
+        card.onclick = () => openModal(t.id);
+        col.appendChild(card);
+      });
+    }
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-btn';
+    addBtn.textContent = '+ Agregar tarea';
+    addBtn.onclick = () => openModal(null, status);
+    col.appendChild(addBtn);
+  });
+}
+
+// ── MODAL ──────────────────────────────────────────────────
+function openModal(taskId, defaultStatus) {
+  editingId = taskId || null;
+  const t = tasks.find(x => x.id === taskId);
+  document.getElementById('modal-title').textContent = t ? 'Editar tarea' : 'Nueva tarea';
+  document.getElementById('f-title').value  = t?.title  ?? '';
+  document.getElementById('f-org').value    = t?.org    ?? 'alzak-group';
+  document.getElementById('f-prio').value   = t?.prio   ?? 'med';
+  document.getElementById('f-status').value = t?.status ?? (defaultStatus || 'pendiente');
+  document.getElementById('f-date').value   = t?.date   ?? '';
+  document.getElementById('f-notes').value  = t?.notes  ?? '';
+  document.getElementById('btn-delete').style.display = t ? 'block' : 'none';
+  document.getElementById('modal-overlay').classList.add('open');
+  setTimeout(() => document.getElementById('f-title').focus(), 60);
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  editingId = null;
+}
+
+async function saveTask() {
+  const title = document.getElementById('f-title').value.trim();
+  if (!title) { document.getElementById('f-title').focus(); return; }
+  const taskData = {
+    id:     editingId || uid(),
+    title,
+    org:    document.getElementById('f-org').value,
+    prio:   document.getElementById('f-prio').value,
+    status: document.getElementById('f-status').value,
+    date:   document.getElementById('f-date').value,
+    notes:  document.getElementById('f-notes').value.trim(),
+  };
+  if (editingId) {
+    const i = tasks.findIndex(x => x.id === editingId);
+    if (i > -1) tasks[i] = taskData;
+  } else {
+    tasks.push(taskData);
+  }
+  closeModal();
+  renderAll();
+  await pushTask(taskData);
+}
+
+async function deleteTask() {
+  if (!editingId) return;
+  if (!confirm('¿Eliminar esta tarea?')) return;
+  const id = editingId;
+  tasks = tasks.filter(x => x.id !== id);
+  closeModal();
+  renderAll();
+  await pushDelete(id);
+}
+
+// ── FILTERS & EVENTS ───────────────────────────────────────
+document.querySelectorAll('.org-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.org-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = btn.dataset.org;
+    renderAll();
+  });
+});
+
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+// ── INIT ───────────────────────────────────────────────────
+checkSetup();
+if (scriptUrl) loadTasks();
+</script>
+</body>
+</html>
