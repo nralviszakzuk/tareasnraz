@@ -58,6 +58,8 @@
   .resp-progress-name { font-size: 11px; font-weight: 600; color: var(--text-secondary); flex: 1; }
   .resp-progress-pct { font-size: 12px; font-weight: 700; }
   .resp-progress-detail { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+  .alert-danger { border-color: #E9A8A8; background: #FDF3F3; }
+  .alert-warn { border-color: #EED9A8; background: #FDF9EF; }
 
   /* FILTERS */
   .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
@@ -99,6 +101,9 @@
   .add-btn { width: 100%; margin-top: 6px; font-size: 12px; color: var(--text-muted); background: transparent; border: 1px dashed var(--border); border-radius: var(--radius); padding: 8px; cursor: pointer; text-align: left; }
   .add-btn:hover { background: var(--surface); border-color: var(--border-strong); color: var(--text-secondary); }
   .empty-state { text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 13px; }
+  .month-sep { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin: 12px 2px 6px; padding-bottom: 4px; border-bottom: 1px dashed var(--border-strong); display: flex; align-items: center; gap: 6px; }
+  .month-sep:first-of-type { margin-top: 2px; }
+  .month-sep .month-count { margin-left: auto; font-weight: 400; }
 
   /* LOADING */
   .loading-overlay { position: fixed; inset: 0; background: rgba(245,245,243,0.8); z-index: 300; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
@@ -449,6 +454,12 @@ function renderStats() {
       </div>`;
   });
 
+  // Indicadores de alerta
+  const open     = visible.filter(t => t.status !== 'completado');
+  const overdue  = open.filter(t => { const d = daysUntil(t.date); return d !== null && d < 0; }).length;
+  const thisWeek = open.filter(t => { const d = daysUntil(t.date); return d !== null && d >= 0 && d <= 7; }).length;
+  const highOpen = open.filter(t => t.prio === 'high').length;
+
   let html = `
     <div class="stat-card donut-card">
       ${donutSVG(pct, pct >= 70 ? '#1B7A3D' : pct >= 40 ? '#BA7517' : '#C62828', 90)}
@@ -461,6 +472,18 @@ function renderStats() {
         <span style="color:#185FA5">● ${prog} en prog.</span>
         <span style="color:#3B6D11">● ${done} compl.</span>
       </div>
+    </div>
+    <div class="stat-card alert-card ${overdue > 0 ? 'alert-danger' : ''}">
+      <div class="stat-num" style="color:${overdue > 0 ? '#C62828' : '#1B7A3D'}">${overdue}</div>
+      <div class="stat-lbl">⚠️ Vencidas</div>
+    </div>
+    <div class="stat-card ${thisWeek > 0 ? 'alert-warn' : ''}">
+      <div class="stat-num" style="color:${thisWeek > 0 ? '#BA7517' : 'var(--text-muted)'}">${thisWeek}</div>
+      <div class="stat-lbl">📅 Vencen esta semana</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:${highOpen > 0 ? '#C62828' : 'var(--text-muted)'}">${highOpen}</div>
+      <div class="stat-lbl">🔥 Alta prioridad abiertas</div>
     </div>`;
 
   if (activeFilter === 'all') {
@@ -495,13 +518,41 @@ function renderAll() {
     const filtered = tasks.filter(t => t.status === status && (activeFilter === 'all' || t.org === activeFilter));
     document.getElementById('cnt-' + status).textContent = filtered.length;
 
+    // Orden cronológico: fecha más próxima primero; sin fecha al final
+    filtered.sort((a, b) => {
+      const da = normDate(a.date), db = normDate(b.date);
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return da.localeCompare(db);
+    });
+
     if (filtered.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'empty-state';
       empty.textContent = 'Sin tareas';
       col.appendChild(empty);
     } else {
+      const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+      let lastMonth = null;
       filtered.forEach(t => {
+        // Separador de mes
+        const nd = normDate(t.date);
+        const monthKey = nd ? nd.slice(0, 7) : 'sin-fecha';
+        if (monthKey !== lastMonth) {
+          lastMonth = monthKey;
+          const sep = document.createElement('div');
+          sep.className = 'month-sep';
+          if (nd) {
+            const [y, m] = nd.split('-');
+            const count = filtered.filter(x => (normDate(x.date)||'').slice(0,7) === monthKey).length;
+            sep.innerHTML = `📆 ${MESES[parseInt(m)-1]} ${y} <span class="month-count">${count}</span>`;
+          } else {
+            const count = filtered.filter(x => !normDate(x.date)).length;
+            sep.innerHTML = `Sin fecha <span class="month-count">${count}</span>`;
+          }
+          col.appendChild(sep);
+        }
         const days = daysUntil(t.date);
         const urgent = days !== null && days <= 7;
         let dateLine = '';
