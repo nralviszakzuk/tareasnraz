@@ -89,6 +89,9 @@
   .sticky-btn { width: 18px; height: 18px; border-radius: 50%; border: none; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.7); }
   .sticky-btn:hover { background: white; }
   .memo-zone-empty { font-size: 11px; color: var(--text-muted); text-align: center; padding: 1.5rem 0.5rem; }
+  .hidden-task { display: none !important; }
+  .show-more-btn { width: 100%; margin-top: 6px; font-size: 12px; font-weight: 600; color: #185FA5; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; cursor: pointer; text-align: center; transition: all 0.15s; }
+  .show-more-btn:hover { border-color: #185FA5; background: #EFF5FC; }
 
   /* FILTERS */
   .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
@@ -365,6 +368,8 @@ let tasks        = [];
 let editingId    = null;
 let activeFilter = 'all';
 let respFilter   = 'all';
+const COL_LIMIT = 5;  // tareas visibles por columna antes del "Ver todas"
+let expandedCols = { 'pendiente': false, 'en-progreso': false, 'completado': false };
 const SCRIPT_URL_DEFAULT = 'https://script.google.com/a/macros/alzakfoundation.org/s/AKfycbxDUNGEjBC6JvkIGKAe5s2JQF18ydWKzyzJGUnYE6TPgSdJtCOndl1JKKXIQkDkplLkkA/exec';
 let scriptUrl    = localStorage.getItem(URL_KEY) || SCRIPT_URL_DEFAULT;
 
@@ -627,6 +632,8 @@ function renderAll() {
     } else {
       const MESES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
       let lastMonth = null;
+      let cardCount = 0;
+      const isExpanded = expandedCols[status];
       filtered.forEach(t => {
         // Separador de mes
         const nd = normDate(t.date);
@@ -643,6 +650,7 @@ function renderAll() {
             const count = filtered.filter(x => !normDate(x.date)).length;
             sep.innerHTML = `Sin fecha <span class="month-count">${count}</span>`;
           }
+          if (!isExpanded && cardCount >= COL_LIMIT) sep.classList.add('hidden-task');
           col.appendChild(sep);
         }
         const days = daysUntil(t.date);
@@ -666,8 +674,24 @@ function renderAll() {
             <span class="prio prio-${t.prio}">${PRIO_LABELS[t.prio]}</span>
           </div>${dateLine}${notesLine}${respLine}`;
         card.onclick = () => openModal(t.id);
+        if (!isExpanded && cardCount >= COL_LIMIT) card.classList.add('hidden-task');
+        cardCount++;
         col.appendChild(card);
       });
+
+      // Botón "Ver todas" / "Ver menos"
+      if (filtered.length > COL_LIMIT) {
+        const moreBtn = document.createElement('button');
+        moreBtn.className = 'show-more-btn';
+        moreBtn.textContent = isExpanded
+          ? '▲ Ver menos'
+          : `▼ Ver todas (${filtered.length - COL_LIMIT} más)`;
+        moreBtn.onclick = () => {
+          expandedCols[status] = !expandedCols[status];
+          renderAll();
+        };
+        col.appendChild(moreBtn);
+      }
     }
 
     const addBtn = document.createElement('button');
