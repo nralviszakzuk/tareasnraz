@@ -61,6 +61,35 @@
   .alert-danger { border-color: #E9A8A8; background: #FDF3F3; }
   .alert-warn { border-color: #EED9A8; background: #FDF9EF; }
 
+  /* ── MEMOS / STICKY NOTES ── */
+  .memos-section { margin-top: 2rem; }
+  .memos-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
+  .memos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media(max-width:768px){ .memos-grid { grid-template-columns: 1fr; } }
+  .memo-panel { background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .memo-panel-header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .memo-panel-name { font-size: 13px; font-weight: 700; }
+  .memo-input-row { display: flex; gap: 6px; margin-bottom: 12px; }
+  .memo-input { flex: 1; padding: 8px 10px; font-size: 13px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); outline: none; font-family: inherit; }
+  .memo-input:focus { border-color: #185FA5; }
+  .memo-add-btn { font-size: 16px; padding: 6px 14px; border-radius: var(--radius); background: #2c2c2a; color: white; border: none; cursor: pointer; }
+  .memo-add-btn:hover { opacity: 0.85; }
+  .memo-zones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .memo-zone { min-height: 140px; border: 2px dashed var(--border); border-radius: 10px; padding: 8px; transition: border-color 0.2s, background 0.2s; }
+  .memo-zone.drag-over { border-color: #185FA5; background: #EFF5FC; }
+  .memo-zone-title { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; text-align: center; }
+  .sticky { position: relative; padding: 10px 12px 12px; margin-bottom: 8px; border-radius: 2px; font-size: 12.5px; line-height: 1.45; cursor: grab; box-shadow: 1px 2px 5px rgba(0,0,0,0.15); word-break: break-word; transition: transform 0.15s; }
+  .sticky:hover { transform: scale(1.02) rotate(0deg) !important; z-index: 5; }
+  .sticky:active { cursor: grabbing; }
+  .sticky.dragging { opacity: 0.5; }
+  .sticky.done-sticky { opacity: 0.75; }
+  .sticky.done-sticky .sticky-text { text-decoration: line-through; }
+  .sticky-actions { position: absolute; top: 3px; right: 5px; display: flex; gap: 3px; opacity: 0; transition: opacity 0.15s; }
+  .sticky:hover .sticky-actions { opacity: 1; }
+  .sticky-btn { width: 18px; height: 18px; border-radius: 50%; border: none; cursor: pointer; font-size: 10px; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.7); }
+  .sticky-btn:hover { background: white; }
+  .memo-zone-empty { font-size: 11px; color: var(--text-muted); text-align: center; padding: 1.5rem 0.5rem; }
+
   /* FILTERS */
   .filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; align-items: center; }
   .filters-label { font-size: 12px; color: var(--text-muted); margin-right: 4px; }
@@ -208,6 +237,53 @@
       <div class="col-header">
         <div class="col-header-left"><span class="status-dot" style="background:#3B6D11"></span>Completado</div>
         <span class="col-count" id="cnt-completado">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEMOS RÁPIDOS -->
+  <div class="memos-section">
+    <div class="memos-title">🗒️ Memos rápidos del día</div>
+    <div class="memos-grid">
+      <div class="memo-panel">
+        <div class="memo-panel-header">
+          <span class="resp-avatar" style="background:#1a1a18">N</span>
+          <span class="memo-panel-name">Nelson</span>
+        </div>
+        <div class="memo-input-row">
+          <input class="memo-input" id="memo-input-nelson" placeholder="Escribe un memo y Enter..." />
+          <button class="memo-add-btn" onclick="addMemo('nelson')">+</button>
+        </div>
+        <div class="memo-zones">
+          <div class="memo-zone" data-owner="nelson" data-state="todo">
+            <div class="memo-zone-title">📌 Por hacer</div>
+            <div class="memo-zone-body" id="memos-nelson-todo"></div>
+          </div>
+          <div class="memo-zone" data-owner="nelson" data-state="done">
+            <div class="memo-zone-title">✅ Hecho</div>
+            <div class="memo-zone-body" id="memos-nelson-done"></div>
+          </div>
+        </div>
+      </div>
+      <div class="memo-panel">
+        <div class="memo-panel-header">
+          <span class="resp-avatar" style="background:#7B1FA2">P</span>
+          <span class="memo-panel-name">Paula</span>
+        </div>
+        <div class="memo-input-row">
+          <input class="memo-input" id="memo-input-paula" placeholder="Escribe un memo y Enter..." />
+          <button class="memo-add-btn" onclick="addMemo('paula')">+</button>
+        </div>
+        <div class="memo-zones">
+          <div class="memo-zone" data-owner="paula" data-state="todo">
+            <div class="memo-zone-title">📌 Por hacer</div>
+            <div class="memo-zone-body" id="memos-paula-todo"></div>
+          </div>
+          <div class="memo-zone" data-owner="paula" data-state="done">
+            <div class="memo-zone-title">✅ Hecho</div>
+            <div class="memo-zone-body" id="memos-paula-done"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -686,8 +762,122 @@ document.addEventListener('keydown', e => {
 });
 
 // ── INIT ───────────────────────────────────────────────────
+// ── MEMOS / STICKY NOTES ───────────────────────────────────
+const STICKY_COLORS = ['#FFF59D','#FFCC80','#F8BBD0','#C5E1A5','#B3E5FC','#E1BEE7','#FFE0B2'];
+const MEMO_CACHE = 'alzak-memos-cache';
+let memos = [];
+
+async function loadMemos() {
+  try {
+    const data = await apiCall({ action: 'getMemos' });
+    memos = data.memos || [];
+    localStorage.setItem(MEMO_CACHE, JSON.stringify(memos));
+  } catch(e) {
+    const cached = localStorage.getItem(MEMO_CACHE);
+    if (cached) memos = JSON.parse(cached);
+  }
+  renderMemos();
+}
+
+function renderMemos() {
+  ['nelson','paula'].forEach(owner => {
+    ['todo','done'].forEach(state => {
+      const zone = document.getElementById(`memos-${owner}-${state}`);
+      if (!zone) return;
+      zone.innerHTML = '';
+      const items = memos.filter(m => m.owner === owner && m.state === state);
+      if (items.length === 0) {
+        zone.innerHTML = `<div class="memo-zone-empty">${state === 'todo' ? 'Sin memos' : 'Nada aún'}</div>`;
+        return;
+      }
+      items.forEach(m => {
+        const el = document.createElement('div');
+        el.className = 'sticky' + (m.state === 'done' ? ' done-sticky' : '');
+        el.draggable = true;
+        el.dataset.id = m.id;
+        const rot = (parseInt(m.id.slice(-2), 36) % 5) - 2;
+        el.style.background = m.color;
+        el.style.transform = `rotate(${rot}deg)`;
+        el.innerHTML = `
+          <div class="sticky-actions">
+            <button class="sticky-btn" title="${m.state==='todo' ? 'Marcar hecho' : 'Volver a por hacer'}" onclick="toggleMemo('${m.id}')">${m.state==='todo' ? '✓' : '↩'}</button>
+            <button class="sticky-btn" title="Eliminar" onclick="removeMemo('${m.id}')">✕</button>
+          </div>
+          <div class="sticky-text">${m.text}</div>`;
+        el.addEventListener('dragstart', e => {
+          el.classList.add('dragging');
+          e.dataTransfer.setData('text/plain', m.id);
+        });
+        el.addEventListener('dragend', () => el.classList.remove('dragging'));
+        zone.appendChild(el);
+      });
+    });
+  });
+}
+
+async function addMemo(owner) {
+  const input = document.getElementById('memo-input-' + owner);
+  const text = input.value.trim();
+  if (!text) { input.focus(); return; }
+  const memo = {
+    id: uid(), owner, text, state: 'todo',
+    color: STICKY_COLORS[Math.floor(Math.random() * STICKY_COLORS.length)]
+  };
+  memos.push(memo);
+  input.value = '';
+  renderMemos();
+  localStorage.setItem(MEMO_CACHE, JSON.stringify(memos));
+  setSyncStatus('syncing');
+  try { await apiCall({ action: 'saveMemo', ...memo }); setSyncStatus('ok'); }
+  catch(e) { setSyncStatus('error'); }
+}
+
+async function toggleMemo(id) {
+  const m = memos.find(x => x.id === id);
+  if (!m) return;
+  m.state = m.state === 'todo' ? 'done' : 'todo';
+  renderMemos();
+  localStorage.setItem(MEMO_CACHE, JSON.stringify(memos));
+  setSyncStatus('syncing');
+  try { await apiCall({ action: 'saveMemo', ...m }); setSyncStatus('ok'); }
+  catch(e) { setSyncStatus('error'); }
+}
+
+async function removeMemo(id) {
+  memos = memos.filter(x => x.id !== id);
+  renderMemos();
+  localStorage.setItem(MEMO_CACHE, JSON.stringify(memos));
+  setSyncStatus('syncing');
+  try { await apiCall({ action: 'deleteMemo', id }); setSyncStatus('ok'); }
+  catch(e) { setSyncStatus('error'); }
+}
+
+document.querySelectorAll('.memo-zone').forEach(zone => {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', async e => {
+    e.preventDefault();
+    zone.classList.remove('drag-over');
+    const id = e.dataTransfer.getData('text/plain');
+    const m = memos.find(x => x.id === id);
+    if (!m) return;
+    m.owner = zone.dataset.owner;
+    m.state = zone.dataset.state;
+    renderMemos();
+    localStorage.setItem(MEMO_CACHE, JSON.stringify(memos));
+    setSyncStatus('syncing');
+    try { await apiCall({ action: 'saveMemo', ...m }); setSyncStatus('ok'); }
+    catch(err) { setSyncStatus('error'); }
+  });
+});
+
+['nelson','paula'].forEach(owner => {
+  const inp = document.getElementById('memo-input-' + owner);
+  if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') addMemo(owner); });
+});
+
 checkSetup();
-if (scriptUrl) loadTasks();
+if (scriptUrl) { loadTasks(); loadMemos(); }
 </script>
 </body>
 </html>
