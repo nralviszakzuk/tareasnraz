@@ -62,7 +62,7 @@
   .alert-warn { border-color: #EED9A8; background: #FDF9EF; }
 
   /* ── MEMOS / STICKY NOTES ── */
-  .memos-section { margin-top: 2rem; }
+  .memos-section { margin-bottom: 1.5rem; }
   .memos-title { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; }
   .memos-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media(max-width:768px){ .memos-grid { grid-template-columns: 1fr; } }
@@ -223,27 +223,6 @@
     <button class="new-task-btn" onclick="openModal(null,'pendiente')">+ Nueva tarea</button>
   </div>
 
-  <div class="board">
-    <div class="col" id="col-pendiente">
-      <div class="col-header">
-        <div class="col-header-left"><span class="status-dot" style="background:#BA7517"></span>Pendiente</div>
-        <span class="col-count" id="cnt-pendiente">0</span>
-      </div>
-    </div>
-    <div class="col" id="col-en-progreso">
-      <div class="col-header">
-        <div class="col-header-left"><span class="status-dot" style="background:#185FA5"></span>En progreso</div>
-        <span class="col-count" id="cnt-en-progreso">0</span>
-      </div>
-    </div>
-    <div class="col" id="col-completado">
-      <div class="col-header">
-        <div class="col-header-left"><span class="status-dot" style="background:#3B6D11"></span>Completado</div>
-        <span class="col-count" id="cnt-completado">0</span>
-      </div>
-    </div>
-  </div>
-
   <!-- MEMOS RÁPIDOS -->
   <div class="memos-section">
     <div class="memos-title">🗒️ Memos rápidos del día</div>
@@ -290,6 +269,28 @@
       </div>
     </div>
   </div>
+
+  <div class="board">
+    <div class="col" id="col-pendiente">
+      <div class="col-header">
+        <div class="col-header-left"><span class="status-dot" style="background:#BA7517"></span>Pendiente</div>
+        <span class="col-count" id="cnt-pendiente">0</span>
+      </div>
+    </div>
+    <div class="col" id="col-en-progreso">
+      <div class="col-header">
+        <div class="col-header-left"><span class="status-dot" style="background:#185FA5"></span>En progreso</div>
+        <span class="col-count" id="cnt-en-progreso">0</span>
+      </div>
+    </div>
+    <div class="col" id="col-completado">
+      <div class="col-header">
+        <div class="col-header-left"><span class="status-dot" style="background:#3B6D11"></span>Completado</div>
+        <span class="col-count" id="cnt-completado">0</span>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <!-- MODAL -->
@@ -803,6 +804,9 @@ async function loadMemos() {
   renderMemos();
 }
 
+const MEMO_LIMIT = 4;  // memos visibles por zona antes del "Ver todos"
+let expandedMemoZones = {};
+
 function renderMemos() {
   ['nelson','paula'].forEach(owner => {
     ['todo','done'].forEach(state => {
@@ -814,6 +818,9 @@ function renderMemos() {
         zone.innerHTML = `<div class="memo-zone-empty">${state === 'todo' ? 'Sin memos' : 'Nada aún'}</div>`;
         return;
       }
+      const zoneKey = owner + '-' + state;
+      const isExp = !!expandedMemoZones[zoneKey];
+      let idx = 0;
       items.forEach(m => {
         const el = document.createElement('div');
         el.className = 'sticky' + (m.state === 'done' ? ' done-sticky' : '');
@@ -833,8 +840,23 @@ function renderMemos() {
           e.dataTransfer.setData('text/plain', m.id);
         });
         el.addEventListener('dragend', () => el.classList.remove('dragging'));
+        if (!isExp && idx >= MEMO_LIMIT) el.classList.add('hidden-task');
+        idx++;
         zone.appendChild(el);
       });
+
+      if (items.length > MEMO_LIMIT) {
+        const btn = document.createElement('button');
+        btn.className = 'show-more-btn';
+        btn.style.fontSize = '11px';
+        btn.style.padding = '6px';
+        btn.textContent = isExp ? '▲ Ver menos' : `▼ Ver todos (${items.length - MEMO_LIMIT} más)`;
+        btn.onclick = () => {
+          expandedMemoZones[zoneKey] = !expandedMemoZones[zoneKey];
+          renderMemos();
+        };
+        zone.appendChild(btn);
+      }
     });
   });
 }
