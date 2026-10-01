@@ -371,8 +371,10 @@ let activeFilter = 'all';
 let respFilter   = 'all';
 const COL_LIMIT = 5;  // tareas visibles por columna antes del "Ver todas"
 let expandedCols = { 'pendiente': false, 'en-progreso': false, 'completado': false };
-const SCRIPT_URL_DEFAULT = 'https://script.google.com/a/macros/alzakfoundation.org/s/AKfycbxDUNGEjBC6JvkIGKAe5s2JQF18ydWKzyzJGUnYE6TPgSdJtCOndl1JKKXIQkDkplLkkA/exec';
-let scriptUrl    = localStorage.getItem(URL_KEY) || SCRIPT_URL_DEFAULT;
+const SCRIPT_URL_DEFAULT = 'https://script.google.com/macros/s/AKfycbw-KjP4rx_FO4qMwMq2TSBZ1rOlNMnDzLZCumEmrwxQTnBtmiVla6fbyo-6cSSE1bM7kQ/exec';
+// Siempre usar la URL pública nueva; sobrescribe cualquier URL vieja guardada en este navegador
+let scriptUrl    = SCRIPT_URL_DEFAULT;
+localStorage.setItem(URL_KEY, SCRIPT_URL_DEFAULT);
 
 // ── SETUP ──────────────────────────────────────────────────
 function saveScriptUrl() {
